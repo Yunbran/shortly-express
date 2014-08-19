@@ -89,7 +89,7 @@ app.post('/login',
         console.log("user doesn't exist")
         res.redirect('/login');
         return;
-      } else if(userRow.attributes.password === req.body.password) {
+      } else if(userRow.validatePassword(req.body.password)) {
         console.log('Password verified.')
         req.session.regenerate(function(){
           req.session.user = req.body.username;
