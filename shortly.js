@@ -23,24 +23,48 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
 
-app.get('/', 
+app.get('/',
+function(req, res) {
+  res.render('login');
+});
+
+app.get('/create',
 function(req, res) {
   res.render('index');
 });
 
-app.get('/create', 
-function(req, res) {
-  res.render('index');
-});
-
-app.get('/links', 
+app.get('/links',
 function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
   });
 });
 
-app.post('/links', 
+app.get('/signup',
+  function(req, res){
+    res.render('signup');
+    });
+
+app.post('/login',
+  function(req, res){
+    console.log("REQ.BODY: " + JSON.stringify(req.body));
+    //check if user exists in users table
+    //if yes, check if user's password is valid.
+
+    //if the password was valid, redirect to GET /links
+    //if the password was not valid, redirect elsewhere
+  });
+
+app.post('/signup',
+  function(req, res){
+    res.render('CANNOT DO THIS YET');
+    //check if the user exists in users table
+    //if not, insert new user into table (including username and password)
+        //then redirect into /links page
+    //if user already exists redirect back to sign up page with message saying that user already exists.
+  });
+
+app.post('/links',
 function(req, res) {
   var uri = req.body.url;
 
@@ -48,25 +72,28 @@ function(req, res) {
     console.log('Not a valid url: ', uri);
     return res.send(404);
   }
-
+  console.log("In link path: The URL is definitely valid.");
   new Link({ url: uri }).fetch().then(function(found) {
     if (found) {
+      console.log("In link path: The link has been found. found.attributes: " + found.attributes);
       res.send(200, found.attributes);
     } else {
+       console.log("In link path: The link was not found.");
       util.getUrlTitle(uri, function(err, title) {
         if (err) {
           console.log('Error reading URL heading: ', err);
           return res.send(404);
         }
-
+        console.log("SINCE LINK WAS NOT FOUND, CREATING A NEW LINK NOW.... " );
         var link = new Link({
           url: uri,
           title: title,
           base_url: req.headers.origin
         });
-
+         console.log("SAVING NEW LINK NOW" );
         link.save().then(function(newLink) {
           Links.add(newLink);
+          console.log("LINK WAS SAVED SUCCESSFULLY: ",newLink);
           res.send(200, newLink);
         });
       });
