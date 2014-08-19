@@ -26,6 +26,7 @@ app.use(express.static(__dirname + '/public'));
 app.get('/',
 function(req, res) {
   res.render('login');
+
 });
 
 app.get('/create',
@@ -43,25 +44,51 @@ function(req, res) {
 app.get('/signup',
   function(req, res){
     res.render('signup');
-    });
+  });
+
+app.get('/login',
+  function(req, res){
+    res.render('login');
+  });
 
 app.post('/login',
   function(req, res){
     console.log("REQ.BODY: " + JSON.stringify(req.body));
-    //check if user exists in users table
-    //if yes, check if user's password is valid.
 
-    //if the password was valid, redirect to GET /links
-    //if the password was not valid, redirect elsewhere
+    new User({'username' : req.body.username}).fetch()
+    .then(function(userRow){
+      console.log("USER WAS FETCHED - ", userRow);
+      if(!userRow){
+        console.log("user doesn't exist")
+        res.render('login');
+        return;
+      } else if(userRow.attributes.password === req.body.password) {
+        console.log('Password verified.')
+        res.render('index');
+      }
+
+    });
   });
 
 app.post('/signup',
   function(req, res){
-    res.render('CANNOT DO THIS YET');
-    //check if the user exists in users table
-    //if not, insert new user into table (including username and password)
-        //then redirect into /links page
-    //if user already exists redirect back to sign up page with message saying that user already exists.
+    new User({'username': req.body.username}).fetch()
+    .then(function(userRow){
+      if(userRow){
+        res.render('signup');
+
+      }else {
+        var user = new User({
+          username: req.body.username,
+          password: req.body.password
+        });
+        user.save()
+        .then(function(newUser){
+          Users.add(newUser);
+          res.render('index');
+        });
+      }
+    });
   });
 
 app.post('/links',
