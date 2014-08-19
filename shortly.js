@@ -2,6 +2,10 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
+var cookieParser = require('cookie-parser');
+var session = require('express-session');
+
+
 
 
 var db = require('./app/config');
@@ -21,26 +25,42 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
+app.use(session({secret:'toysrus'}));
+app.use(cookieParser('toysrus'));
 
+
+
+function checkUser(req, res, next){
+  if(req.session.user){
+    next();
+  } else {
+    req.session.error = 'Access denied.';
+    res.redirect('/login');
+  }
+}
 
 app.get('/',
 function(req, res) {
-  res.render('login');
+  res.redirect('/index');
 
 });
 
-app.get('/create',
+app.get('/create', checkUser,
 function(req, res) {
-  res.render('index');
+  res.redirect('index');
 });
 
-app.get('/links',
+app.get('/links', checkUser,
 function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
   });
 });
 
+app.get('/index', checkUser,
+  function(req, res){
+    res.render('index');
+});
 app.get('/signup',
   function(req, res){
     res.render('signup');
@@ -49,6 +69,13 @@ app.get('/signup',
 app.get('/login',
   function(req, res){
     res.render('login');
+  });
+
+app.get('/logout',
+  function(req, res){
+    req.session.destroy(function(){
+      res.redirect('/');
+    });
   });
 
 app.post('/login',
@@ -60,11 +87,14 @@ app.post('/login',
       console.log("USER WAS FETCHED - ", userRow);
       if(!userRow){
         console.log("user doesn't exist")
-        res.render('login');
+        res.redirect('/login');
         return;
       } else if(userRow.attributes.password === req.body.password) {
         console.log('Password verified.')
-        res.render('index');
+        req.session.regenerate(function(){
+          req.session.user = req.body.username;
+          res.redirect('/index');
+        });
       }
 
     });
@@ -75,7 +105,7 @@ app.post('/signup',
     new User({'username': req.body.username}).fetch()
     .then(function(userRow){
       if(userRow){
-        res.render('signup');
+        res.redirect('/signup');
 
       }else {
         var user = new User({
@@ -85,7 +115,7 @@ app.post('/signup',
         user.save()
         .then(function(newUser){
           Users.add(newUser);
-          res.render('index');
+          res.redirect('/login');
         });
       }
     });
